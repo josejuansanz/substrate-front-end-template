@@ -31,6 +31,9 @@ function Main(props) {
           const evParams = eventParams(evHuman)
           const evNamePhase = `${evName}::(phase=${phase.toString()})`
 
+          // If the transaction fails, we show an error
+          if (evName === 'system:ExtrinsicFailed') alert('An error has occurred');
+
           if (FILTERED_EVENTS.includes(evNamePhase)) return
 
           setEventFeed(e => [

@@ -22,6 +22,7 @@ import NodeInfo from './NodeInfo'
 import TemplateModule from './TemplateModule'
 import Transfer from './Transfer'
 import Upgrade from './Upgrade'
+import QuadraticVoting from './QuadraticVoting'
 
 function Main() {
   const { apiState, apiError, keyringState } = useSubstrateState()
@@ -69,6 +70,9 @@ function Main() {
             <Metadata />
             <BlockNumber />
             <BlockNumber finalized />
+          </Grid.Row>
+          <Grid.Row stretched>
+            <QuadraticVoting />
           </Grid.Row>
           <Grid.Row stretched>
             <Balances />
