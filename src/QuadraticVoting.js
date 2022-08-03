@@ -10,13 +10,28 @@ function Main(props) {
     state: { currentAccount },
   } = useSubstrate()
 
+  const [userIdentity, setUserIdentity] = useState('')
   const [proposals, setProposals] = useState([])
-  const [newProposal, setNewProposal] = useState('')
   const [user, setUser] = useState()
   const [numVotes, setNumVotes] = useState(0)
 
+  // Inputs
+  const [newProposal, setNewProposal] = useState('')
+  const [addIdentityAccount, setAddIdentityAccount] = useState('')
+  const [addIdentityName, setAddIdentityName] = useState('')
+  const [removeIdentityAccount, setRemoveIdentityAccount] = useState('')
+
   // The transaction submission status
   const [status, setStatus] = useState('')
+
+  const getUserIdentity = async () => {
+    if (currentAccount) {
+      const identity = await api.query.identityVoting.identities(
+        currentAccount.address
+      )
+      setUserIdentity(identity.isSome ? identity.unwrap().toHuman() : '')
+    }
+  }
 
   const getProposals = async () => {
     const proposalsRetrieved =
@@ -39,7 +54,7 @@ function Main(props) {
       )
       const userData = {
         registered: userInfo.isSome,
-        remainingTokens: userInfo.isSome ? userInfo.unwrap()[1].toNumber() : 0,
+        remainingTokens: userInfo.isSome ? userInfo.unwrap().toNumber() : 0,
         num_votes: userVotesInfo.isSome
           ? userVotesInfo.unwrap()[1].toNumber()
           : 0,
@@ -49,6 +64,7 @@ function Main(props) {
   }
 
   const getAllInfo = () => {
+    getUserIdentity()
     getProposals()
     getUserInfo()
   }
@@ -81,16 +97,144 @@ function Main(props) {
             marginLeft: 20,
           }}
         >
-          STATUS: {status}
+          {status}
         </span>
       </h1>
+
+      {/* USER */}
+      {userIdentity ? (
+        <div>USER IDENTITY: {userIdentity}</div>
+      ) : (
+        <>
+          <div style={{ marginBottom: 10 }}>
+            You need to identify in order to participate in the voting. Ask an
+            ADMIN to do it.
+          </div>
+          {currentAccount?.address ===
+            '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY' && (
+            <>
+              <div style={{ marginBottom: 10 }}>
+                Hi ADMIN! Here you can manage the identity of the accounts
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <span style={{ marginRight: 10 }}>Set identity</span>
+                <Input
+                  label="Account"
+                  state="addIdentityAccount"
+                  type="text"
+                  onChange={(_, { value }) => setAddIdentityAccount(value)}
+                  style={{ marginRight: 10 }}
+                />
+                <Input
+                  label="Name"
+                  state="addIdentityName"
+                  type="text"
+                  onChange={(_, { value }) => setAddIdentityName(value)}
+                  style={{ marginRight: 10 }}
+                />
+                <TxButton
+                  label="Add"
+                  type="SUDO-TX"
+                  setStatus={setStatus}
+                  color="green"
+                  attrs={{
+                    palletRpc: 'identityVoting',
+                    callable: 'setIdentity',
+                    inputParams: [
+                      { type: 'AccountId32', value: addIdentityAccount },
+                      { type: 'Bytes', value: addIdentityName },
+                    ],
+                    paramFields: [
+                      { name: 'account', type: 'AccountId32', optional: false },
+                      { name: 'name', type: 'Bytes', optional: false },
+                    ],
+                  }}
+                />
+              </div>
+              <div>
+                <span style={{ marginRight: 10 }}>Remove identity</span>
+                <Input
+                  label="Account"
+                  state="removeIdentityAccount"
+                  type="text"
+                  onChange={(_, { value }) => setRemoveIdentityAccount(value)}
+                  style={{ marginRight: 10 }}
+                />
+                <TxButton
+                  label="Remove"
+                  type="SUDO-TX"
+                  setStatus={setStatus}
+                  color="red"
+                  attrs={{
+                    palletRpc: 'identityVoting',
+                    callable: 'removeIdentity',
+                    inputParams: [
+                      { type: 'AccountId32', value: removeIdentityAccount },
+                    ],
+                    paramFields: [
+                      { name: 'account', type: 'AccountId32', optional: false },
+                    ],
+                  }}
+                />
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {userIdentity && user && !user.registered && (
+        <div>
+          <span style={{ marginRight: 10 }}>
+            In order to participate, you need to REGISTER in this voting first
+          </span>
+          <TxButton
+            label="Register"
+            type="SIGNED-TX"
+            setStatus={setStatus}
+            attrs={{
+              palletRpc: 'quadraticVoting',
+              callable: 'register',
+              inputParams: [],
+              paramFields: [],
+            }}
+          />
+        </div>
+      )}
+
+      {userIdentity && user && user.registered && (
+        <>
+          <div style={{ marginBottom: 10 }}>
+            <span style={{ marginRight: 10 }}>
+              You are registered in this voting
+            </span>
+            <TxButton
+              label="Unregister"
+              type="SIGNED-TX"
+              setStatus={setStatus}
+              attrs={{
+                palletRpc: 'quadraticVoting',
+                callable: 'unregister',
+                inputParams: [],
+                paramFields: [],
+              }}
+            />
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            USER REMAINING TOKENS: {user.remainingTokens}
+          </div>
+        </>
+      )}
+
+      <div
+        style={{ borderTop: '3px solid #bbb', marginTop: 20, marginBottom: 20 }}
+      />
 
       <div>
         {proposals.length ? (
           <>
-            <div>PROPOSAL: {proposals[0].name}</div>
-            <div>
-              Votes:{' '}
+            <div style={{ fontWeight: 900 }}>PROPOSAL: {proposals[0].name}</div>
+            <div style={{ marginBottom: 10 }}>
+              Total votes:{' '}
               {proposals[0].votes === 0
                 ? '0 votes'
                 : proposals[0].votes > 0
@@ -110,7 +254,6 @@ function Main(props) {
               onChange={(_, { value }) => setNewProposal(value)}
               style={{ marginRight: 10 }}
             />
-
             <TxButton
               label="Create Proposal"
               type="SIGNED-TX"
@@ -126,47 +269,10 @@ function Main(props) {
         )}
       </div>
 
-      {proposals.length > 0 && user && !user.registered && (
-        <div>
-          <span style={{ marginRight: 10 }}>
-            YOU ARE NOT REGISTERED IN THIS VOTING
-          </span>
-          <TxButton
-            label="Register"
-            type="SIGNED-TX"
-            setStatus={setStatus}
-            attrs={{
-              palletRpc: 'quadraticVoting',
-              callable: 'register',
-              inputParams: [proposals[0].name],
-              paramFields: [true],
-            }}
-          />
-        </div>
-      )}
       {proposals.length > 0 && user && user.registered && (
         <>
           <div style={{ marginBottom: 10 }}>
-            <span style={{ marginRight: 10 }}>
-              YOU ARE REGISTERED IN THIS VOTING
-            </span>
-            <TxButton
-              label="Unregister"
-              type="SIGNED-TX"
-              setStatus={setStatus}
-              attrs={{
-                palletRpc: 'quadraticVoting',
-                callable: 'unregister',
-                inputParams: [proposals[0].name],
-                paramFields: [true],
-              }}
-            />
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            USER REMAINING TOKENS: {user.remainingTokens}
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            USER VOTES ON THIS PROPOSAL: {Math.abs(user.num_votes)}{' '}
+            Your votes on this proposal: {Math.abs(user.num_votes)}{' '}
             {user.num_votes === 0 ? '' : user.num_votes > 0 ? 'aye' : 'nay'}{' '}
             votes
           </div>
@@ -218,6 +324,9 @@ function Main(props) {
           </div>
         </>
       )}
+      <div
+        style={{ borderTop: '3px solid #bbb', marginTop: 20, marginBottom: 20 }}
+      />
     </Grid.Column>
   )
 }

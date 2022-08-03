@@ -66,13 +66,13 @@ function Main() {
       <Container>
         <Grid stackable columns="equal">
           <Grid.Row stretched>
+            <QuadraticVoting />
+          </Grid.Row>
+          <Grid.Row stretched>
             <NodeInfo />
             <Metadata />
             <BlockNumber />
             <BlockNumber finalized />
-          </Grid.Row>
-          <Grid.Row stretched>
-            <QuadraticVoting />
           </Grid.Row>
           <Grid.Row stretched>
             <Balances />
